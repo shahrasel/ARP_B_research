@@ -1,6 +1,6 @@
 <?php
 error_reporting(0);
-if(!empty($_POST)) {
+/*if(!empty($_POST)) {
     $url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=" . ($_POST['city'] ? $_POST['city'] : "51.4518462,7.0115717") . "&radius=" . ($_POST['radius'] ? $_POST['radius'] : "500") . "&type=" . ($_POST['amenity'] ? $_POST['amenity'] : "restaurant") . "&key=AIzaSyAFqAPWaxVQnJMkCBEHvlP1fIqevvgoN44";
 
     $ch = curl_init();
@@ -28,7 +28,7 @@ if(!empty($_POST)) {
             $i++;
         }
     }
-}
+}*/
 
 /*$arr[0][0] = 'Bondi Beach';
 $arr[0][1] = -33.890542;
@@ -47,6 +47,8 @@ $arr[2][3] = 3;*/
 
 /*print_r($arr);
 exit;*/
+
+$arr = ["restaurant", "park", "hospital", "bank", "bar", "grocery_store"];
 ?>
 <!DOCTYPE html>
 <html>
@@ -143,42 +145,77 @@ exit;*/
         </div>
     </form>
 </div>
-
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 <script type="text/javascript">
-    /*var locations = [
-        ['Bondi Beach', -33.890542, 151.274856, 4],
-        ['Coogee Beach', -33.923036, 151.259052, 5],
-        ['Cronulla Beach', -34.028249, 151.157507, 3],
-        ['Manly Beach', -33.80010128657071, 151.28747820854187, 2],
-        ['Maroubra Beach', -33.950198, 151.259302, 1]
-    ];*/
-<?php if(!empty($_POST)) { ?>
-    var locations = <?php echo json_encode($arr); ?>;
 
-    var map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 12,
-        center: new google.maps.LatLng(<?php echo ($_POST['city']?$_POST['city']:"51.4518462,7.0115717") ?>),
-        mapTypeId: google.maps.MapTypeId.ROADMAP
-    });
+    $( document ).ready(function() {
+        const styles = {
+            default: [],
+            hide: [
+                {
+                    featureType: "poi.business",
+                    stylers: [{ visibility: "off" }],
+                },
+                {
+                    featureType: "transit",
+                    elementType: "labels.icon",
+                    stylers: [{ visibility: "off" }],
+                },
+            ],
+        };
 
-    var infowindow = new google.maps.InfoWindow();
-
-    var marker, i;
-
-    for (i = 0; i < locations.length; i++) {
-        marker = new google.maps.Marker({
-            position: new google.maps.LatLng(locations[i][1], locations[i][2]),
-            map: map
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 12,
+            center: new google.maps.LatLng(32.915176,-97.371407),
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            styles: styles["hide"]
         });
 
-        google.maps.event.addListener(marker, 'click', (function(marker, i) {
-            return function() {
-                infowindow.setContent(locations[i][0]+"<br/>"+locations[i][4]);
-                infowindow.open(map, marker);
+        var infowindow = new google.maps.InfoWindow();
+        var marker, i;
+
+
+
+
+        var y=0;
+        localStorage.setItem('test', y);
+        <?php echo "var javascript_array = ". json_encode($arr) . ";\n"; ?>
+        const myInterval = setInterval(function(){get_fb(javascript_array,localStorage.getItem('test')); y++; parseInt(localStorage.setItem('test', y))}, 2000);
+
+        function get_fb(arr,a) {
+            if(arr[a]) {
+                $.get("http://localhost:8887/ARP_B_research/ajax/gmap_api_call.php?amenity=" + arr[a], function (data, status) {
+                    if(data) {
+                        var locations = JSON.parse(data);
+
+                        plot_map(locations, arr[a]);
+                    }
+                });
             }
-        })(marker, i));
-    }
-<?php } ?>
+            else {
+                clearInterval(myInterval);
+            }
+        }
+
+        function plot_map(locations,amenity) {
+            for (i = 0; i < locations.length; i++) {
+                if (locations[i][1]) {
+                    marker = new google.maps.Marker({
+                        position: new google.maps.LatLng(locations[i][1], locations[i][2]),
+                        map: map,
+                        icon: 'http://localhost:8887/ARP_B_research/images/' + amenity + '.png'
+                    });
+
+                    google.maps.event.addListener(marker, 'click', (function (marker, i) {
+                        return function () {
+                            infowindow.setContent(locations[i][0] + "<br/>" + locations[i][4]);
+                            infowindow.open(map, marker);
+                        }
+                    })(marker, i));
+                }
+            }
+        }
+    });
 </script>
 </body>
 </html>
